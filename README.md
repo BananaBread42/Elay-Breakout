@@ -1,1 +1,2 @@
-#Elay-Doodle-Jump
+#Elay-Breakout
+Players use a paddle to deflect a ball against a wall of bricks that break when you hit it. The goal is to clear all bricks, which speeds up the ball and provides points, without letting the ball fall below the paddle. If the ball does fall  below the paddle then it is game over and you start again.
