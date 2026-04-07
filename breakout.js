@@ -10,11 +10,11 @@ let playerHeight = 10;
 let playerVelocityX = 10;
 
 let player = {
-    x : boardWidth/2 - playerWidth/2,
-    y : boardHeight - playerHeight - 5,
-    width : playerWidth,
-    height : playerHeight,
-    velocityX : playerVelocityX
+    x: boardWidth / 2 - playerWidth / 2,
+    y: boardHeight - playerHeight - 5,
+    width: playerWidth,
+    height: playerHeight,
+    velocityX: playerVelocityX
 }
 
 //ball
@@ -24,97 +24,155 @@ let ballVelocityX = 3;
 let ballVelocityY = 2;
 
 let ball = {
-    x : boardWidth/2,
-    y : boardHeight/2,
-    width : ballWidth,
-    height : ballHeight,
-    velocityX : ballVelocityX,
-    velocityY : ballVelocityY
+    x: boardWidth / 2 - ballWidth / 2,
+    y: boardHeight / 2 - ballHeight / 2,
+    width: ballWidth,
+    height: ballHeight,
+    velocityX: ballVelocityX,
+    velocityY: ballVelocityY
 }
 
-window.onload = function(){
+//blocks
+let blockArray = [];
+let blockWidth = 50;
+let blockHeight = 10;
+let blockColumns = 8;
+let blockRows = 3;
+let blockCount = 0;
+
+// starting block position
+let blockX = 15;
+let blockY = 45;
+
+window.onload = function () {
     board = document.getElementById("board");
     board.height = boardHeight;
     board.width = boardWidth;
-    context = board.getContext("2d"); //used for drawing on the board
-
-    //draw player
-    context.fillStyle = "skyblue";
-    context.fillRect(player.x, player.y, player.width, player.height);
+    context = board.getContext("2d");
 
     requestAnimationFrame(update);
     document.addEventListener("keydown", movePlayer);
+
+    createBlocks();
 }
 
-function update(){
+function update() {
     requestAnimationFrame(update);
     context.clearRect(0, 0, board.width, board.height);
 
-    //player
+    // player
     context.fillStyle = "skyblue";
     context.fillRect(player.x, player.y, player.width, player.height);
 
+    // ball
     context.fillStyle = "white";
     ball.x += ball.velocityX;
     ball.y += ball.velocityY;
     context.fillRect(ball.x, ball.y, ball.width, ball.height);
 
-    //bounce ball off walls
-    if (ball.y <= 0){
-        //if ball touches the top wall
-        ball.velocityY *= -1; //reverse direction
+    // wall collisions
+    if (ball.y <= 0) {
+        ball.velocityY *= -1;
     }
-    else if (ball.x <= 0 || (ball.x +ball.width) >= boardWidth){
-        //if the ball touches the sides
-        ball.velocityY *= -1; //reverse direction
+    else if (ball.x <= 0 || ball.x + ball.width >= boardWidth) {
+        ball.velocityX *= -1; // FIXED
     }
     else if (ball.y + ball.height >= boardHeight) {
-        //if ball touches the bottom
-        //game over
-
+        alert("Game Over");
+        document.location.reload();
     }
-}
 
-function outOfBounds (xPosition){
-    return (xPosition < 0 || xPosition + playerWidth > boardWidth)
-}
+    // paddle collision
+    if (detectCollision(ball, player)) {
+        let collidePoint = ball.x + ball.width / 2 - (player.x + player.width / 2);
+        collidePoint = collidePoint / (player.width / 2);
 
-function movePlayer(e){
-    
-    if (e.code == "ArrowLeft"){
-        //player.x -= player.velocityX;
-        let nextPlayerX = player.x -player.velocityX;
-        if (!outOfBounds(nextPlayerX)){
-            player.x = nextPlayerX;
+        ball.velocityX = collidePoint * 5;
+        ball.velocityY *= -1;
+    }
+
+    // blocks
+    context.fillStyle = "skyblue";
+    for (let i = 0; i < blockArray.length; i++) {
+        let block = blockArray[i];
+
+        if (!block.break) {
+            if (topCollision(ball, block) || bottomCollision(ball, block)) {
+                ball.velocityY *= -1;
+                block.break = true;
+                blockCount--;
+            }
+            else if (leftCollision(ball, block) || rightCollision(ball, block)) {
+                ball.velocityX *= -1;
+                block.break = true;
+                blockCount--;
+            }
+
+            context.fillRect(block.x, block.y, block.width, block.height);
         }
     }
-    else if (e.code == "ArrowRight"){
-        //player.x += player.velocityX;
-        let nextPlayerX = player.x + player.velocityX;
-        if (!outOfBounds(nextPlayerX)){
-            player.x = nextPlayerX;
+}
+
+// movement
+function movePlayer(e) {
+    if (e.code == "ArrowLeft") {
+        let nextX = player.x - player.velocityX;
+        if (!outOfBounds(nextX)) {
+            player.x = nextX;
+        }
+    }
+    else if (e.code == "ArrowRight") {
+        let nextX = player.x + player.velocityX;
+        if (!outOfBounds(nextX)) {
+            player.x = nextX;
         }
     }
 }
-function detectCollision (a,b){
-    return a.x < b.x + b.width && // a's top left corner doesnt reach b's top right corner
-           a.x + a.width > b.x && // a's top right corner passes b's top left corner
-           a.y + a.height > b.y && // a's top left corner doesnt reach b's bottom left corner
-           a.y + a.height > b.y; // a's bottom left corner passes b's top left corner
+
+function outOfBounds(xPosition) {
+    return (xPosition < 0 || xPosition + playerWidth > boardWidth);
 }
 
-function topCollision (ball, block){ //a is above b (ball is above block)
-    return detectCollision(ball, block) && (ball.y + ball.height) >= block.y;
+// collision detection (FIXED)
+function detectCollision(a, b) {
+    return a.x < b.x + b.width &&
+           a.x + a.width > b.x &&
+           a.y < b.y + b.height &&
+           a.y + a.height > b.y;
 }
 
-function bottomCollision(ball, block){ //a is below b (ball is below block)
-    return detectCollision(ball, block) && (block.y + block.height) >= ball.y;
+function topCollision(ball, block) {
+    return detectCollision(ball, block) && ball.y + ball.height >= block.y;
 }
 
-function leftCollision(ball, block) { // a is left of b (ball is left of block)
-    return detectCollision (ball, block) && (ball.x + ball.width) >= block.x;
+function bottomCollision(ball, block) {
+    return detectCollision(ball, block) && block.y + block.height >= ball.y;
 }
 
-function rightCollision(ball,block){ //a is right of b
-    return detectCollision(ball, block) && (block.x + block.width) >= ball.x;
+function leftCollision(ball, block) {
+    return detectCollision(ball, block) && ball.x + ball.width >= block.x;
+}
+
+function rightCollision(ball, block) {
+    return detectCollision(ball, block) && block.x + block.width >= ball.x;
+}
+
+// create blocks
+function createBlocks() {
+    blockArray = [];
+
+    for (let c = 0; c < blockColumns; c++) {
+        for (let r = 0; r < blockRows; r++) {
+            let block = {
+                x: blockX + c * (blockWidth + 10),
+                y: blockY + r * (blockHeight + 10),
+                width: blockWidth,
+                height: blockHeight,
+                break: false
+            };
+            blockArray.push(block);
+        }
+    }
+
+    blockCount = blockArray.length;
 }
