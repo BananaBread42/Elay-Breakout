@@ -4,23 +4,23 @@ let boardWidth = 500;
 let boardHeight = 500;
 let context;
 
-//game stats
+//game state
+let gameOver = false;
 let score = 0;
+let highScore = localStorage.getItem("highScore") || 0;
 let lives = 3;
 let level = 1;
 
 //player
 let playerWidth = 80;
 let playerHeight = 10;
-let playerVelocityX = 10;
-
 let player = {
     x: boardWidth / 2 - playerWidth / 2,
     y: boardHeight - playerHeight - 5,
     width: playerWidth,
     height: playerHeight,
-    velocityX: playerVelocityX
-}
+    velocityX: 10
+};
 
 //ball
 let ballWidth = 10;
@@ -32,14 +32,14 @@ let ball = {
     height: ballHeight,
     velocityX: 3,
     velocityY: 2
-}
+};
 
 //blocks
 let blockArray = [];
-let blockWidth = 50;
-let blockHeight = 10;
 let blockColumns = 8;
 let blockRows = 3;
+let blockWidth = 50;
+let blockHeight = 10;
 let blockCount = 0;
 
 let blockX = 15;
@@ -54,23 +54,35 @@ window.onload = function () {
     board.width = boardWidth;
     context = board.getContext("2d");
 
-    requestAnimationFrame(update);
-    document.addEventListener("keydown", movePlayer);
+    document.addEventListener("keydown", keyHandler);
 
-    //mouse control
     document.addEventListener("mousemove", function(e){
         let rect = board.getBoundingClientRect();
         player.x = e.clientX - rect.left - player.width/2;
     });
 
     createBlocks();
+    requestAnimationFrame(update);
 }
 
-function update() {
+function update(){
     requestAnimationFrame(update);
-    context.clearRect(0, 0, board.width, board.height);
+    context.clearRect(0,0,board.width,board.height);
 
-    //draw UI
+    //TITLE SCREEN
+    if (gameOver){
+        context.fillStyle = "white";
+        context.font = "30px Arial";
+        context.fillText("BREAKOUT", 160, 150);
+
+        context.font = "18px Arial";
+        context.fillText("Score: " + score, 200, 200);
+        context.fillText("High Score: " + highScore, 170, 230);
+        context.fillText("Press SPACE to Restart", 130, 280);
+        return;
+    }
+
+    //UI
     context.fillStyle = "white";
     context.font = "16px Arial";
     context.fillText("Score: " + score, 10, 20);
@@ -87,25 +99,24 @@ function update() {
     ball.y += ball.velocityY;
     context.fillRect(ball.x, ball.y, ball.width, ball.height);
 
-    //wall collisions
-    if (ball.y <= 0) {
+    //walls
+    if (ball.y <= 0){
         ball.velocityY *= -1;
     }
-    else if (ball.x <= 0 || ball.x + ball.width >= boardWidth) {
+    else if (ball.x <= 0 || ball.x + ball.width >= boardWidth){
         ball.velocityX *= -1;
     }
-    else if (ball.y + ball.height >= boardHeight) {
+    else if (ball.y + ball.height >= boardHeight){
         lives--;
-        if (lives == 0) {
-            alert("Game Over!");
-            document.location.reload();
+        if (lives <= 0){
+            endGame();
         } else {
             resetBall();
         }
     }
 
-    //paddle collision
-    if (detectCollision(ball, player)) {
+    //paddle
+    if (detectCollision(ball, player)){
         let collidePoint = ball.x + ball.width/2 - (player.x + player.width/2);
         collidePoint = collidePoint / (player.width/2);
 
@@ -115,16 +126,16 @@ function update() {
 
     //blocks
     context.fillStyle = "skyblue";
-    for (let i = 0; i < blockArray.length; i++) {
+    for (let i = 0; i < blockArray.length; i++){
         let block = blockArray[i];
 
-        if (!block.break) {
-            if (detectCollision(ball, block)) {
+        if (!block.break){
+            if (detectCollision(ball, block)){
                 block.break = true;
                 score += 10;
                 blockCount--;
 
-                //random powerup
+                //powerup chance
                 if (Math.random() < 0.2){
                     powerUps.push({
                         x: block.x,
@@ -135,7 +146,6 @@ function update() {
                     });
                 }
 
-                //bounce
                 ball.velocityY *= -1;
             }
 
@@ -152,13 +162,13 @@ function update() {
         context.fillRect(p.x, p.y, p.width, p.height);
 
         if (detectCollision(p, player)){
-            player.width += 20; //increase paddle
-            powerUps.splice(i, 1);
+            player.width += 20;
+            powerUps.splice(i,1);
             i--;
         }
     }
 
-    //win condition
+    //win
     if (blockCount == 0){
         level++;
         blockRows++;
@@ -169,36 +179,54 @@ function update() {
     }
 }
 
+//end game (NO RELOAD)
+function endGame(){
+    gameOver = true;
+
+    if (score > highScore){
+        highScore = score;
+        localStorage.setItem("highScore", highScore);
+    }
+}
+
+//reset game
+function resetGame(){
+    score = 0;
+    lives = 3;
+    level = 1;
+    blockRows = 3;
+    player.width = 80;
+
+    createBlocks();
+    resetBall();
+
+    gameOver = false;
+}
+
 //reset ball
 function resetBall(){
-    ball.x = boardWidth / 2 - ballWidth / 2;
-    ball.y = boardHeight / 2 - ballHeight / 2;
+    ball.x = boardWidth / 2 - 5;
+    ball.y = boardHeight / 2 - 5;
     ball.velocityX = 3;
     ball.velocityY = 2;
 }
 
-//movement
-function movePlayer(e) {
-    if (e.code == "ArrowLeft") {
-        let nextX = player.x - player.velocityX;
-        if (!outOfBounds(nextX)) {
-            player.x = nextX;
-        }
+//controls
+function keyHandler(e){
+    if (gameOver && e.code == "Space"){
+        resetGame();
     }
-    else if (e.code == "ArrowRight") {
-        let nextX = player.x + player.velocityX;
-        if (!outOfBounds(nextX)) {
-            player.x = nextX;
-        }
-    }
-}
 
-function outOfBounds(xPosition) {
-    return (xPosition < 0 || xPosition + player.width > boardWidth);
+    if (e.code == "ArrowLeft"){
+        player.x -= player.velocityX;
+    }
+    else if (e.code == "ArrowRight"){
+        player.x += player.velocityX;
+    }
 }
 
 //collision
-function detectCollision(a, b) {
+function detectCollision(a, b){
     return a.x < b.x + b.width &&
            a.x + a.width > b.x &&
            a.y < b.y + b.height &&
@@ -206,19 +234,18 @@ function detectCollision(a, b) {
 }
 
 //blocks
-function createBlocks() {
+function createBlocks(){
     blockArray = [];
 
-    for (let c = 0; c < blockColumns; c++) {
-        for (let r = 0; r < blockRows; r++) {
-            let block = {
+    for (let c = 0; c < blockColumns; c++){
+        for (let r = 0; r < blockRows; r++){
+            blockArray.push({
                 x: blockX + c * (blockWidth + 10),
                 y: blockY + r * (blockHeight + 10),
                 width: blockWidth,
                 height: blockHeight,
                 break: false
-            };
-            blockArray.push(block);
+            });
         }
     }
 
