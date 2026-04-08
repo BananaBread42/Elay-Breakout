@@ -1,9 +1,20 @@
-body{
+body {
     text-align: center;
+    background-color: #111;
+    color: white;
+    font-family: Arial, sans-serif;
 }
-#board{
+
+h1 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 36px;
+    letter-spacing: 2px;
+}
+
+#board {
     background-color: black;
-    border-top:5px solid skyblue;
-    border-left:5xp solid skyblue;
-    border-right:5xp solid skyblue;
+    border: 5px solid skyblue;
+    display: block;
+    margin: 0 auto;
 }
